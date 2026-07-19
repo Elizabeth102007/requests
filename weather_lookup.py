@@ -1,52 +1,106 @@
 import requests
-city = input("Enter city name: ")
-URL = "https://geocoding-api.open-meteo.com/v1/search"
-parameter = {
-    "name": city
-}
 
-r = requests.get(URL, params=parameter)
 
-if r.status_code == 200:
-    data = r.json()
+def get_city_coordinates(city):
+    
+
+    url = "https://geocoding-api.open-meteo.com/v1/search"
+
+    parameters = {
+        "name": city
+    }
+
+    response = requests.get(url, params=parameters)
+
+    if response.status_code != 200:
+        print(f"Error: {response.status_code}")
+        return None
+
+    data = response.json()
 
     if "results" not in data or len(data["results"]) == 0:
         print("City not found")
+        return None
 
-    else:
-       result = data["results"][0]
-       latitude = result["latitude"]
-       longitude = result["longitude"]
-       name = result["name"]
-       country = result["country"]
-       print(f"City: {name}, {country}")
-       print(f"Latitude: {latitude}")
-       print(f"Longitude: {longitude}")
-       
-       b_url = "https://api.open-meteo.com/v1/forecast"
-       params= {
-            "latitude": latitude,
-            "longitude": longitude,
-            "current": ["temperature_2m","wind_speed_10m","relative_humidity_2m", "dew_point_2m"]
-         }
-       response = requests.get(b_url, params=params)
-       
-       if response.status_code == 200:
-          open_data = response.json()
+    result = data["results"][0]
 
-          temperature = open_data["current"]["temperature_2m"]
-          unit_temp = open_data["current_units"]["temperature_2m"]
-          wind = open_data["current"]["wind_speed_10m"]
-          unit_wind = open_data["current_units"]["wind_speed_10m"]
-          humidity = open_data["current"]["relative_humidity_2m"]
-          unit_humid = open_data["current_units"]["relative_humidity_2m"]
-          dew = open_data["current"]["dew_point_2m"]
-          unit_dew = open_data["current_units"]["dew_point_2m"]
-          print(f"Temperature: {temperature}{unit_temp}")
-          print(f"Wind: {wind} {unit_wind}")
-          print(f"Relative Humidity: {humidity}{unit_humid}")
-          print(f"Dew point: {dew}{unit_dew}")
-else: 
-    print(f"Error: {r.status_code}")
+    return {
+        "name": result["name"],
+        "country": result["country"],
+        "latitude": result["latitude"],
+        "longitude": result["longitude"]
+    }
 
+
+def get_weather(latitude, longitude):
     
+
+    url = "https://api.open-meteo.com/v1/forecast"
+
+    parameters = {
+        "latitude": latitude,
+        "longitude": longitude,
+        "current": [
+            "temperature_2m",
+            "wind_speed_10m",
+            "relative_humidity_2m",
+            "dew_point_2m"
+        ]
+    }
+
+    response = requests.get(url, params=parameters)
+
+    if response.status_code != 200:
+        print(f"Error: {response.status_code}")
+        return None
+
+    return response.json()
+
+
+def display_city_info(city_data):
+    
+
+    print(f"City: {city_data['name']}, {city_data['country']}")
+    print(f"Latitude: {city_data['latitude']}")
+    print(f"Longitude: {city_data['longitude']}")
+
+
+def display_weather(weather_data):
+    
+    current = weather_data["current"]
+    units = weather_data["current_units"]
+
+    temperature = current["temperature_2m"]
+    wind = current["wind_speed_10m"]
+    humidity = current["relative_humidity_2m"]
+    dew_point = current["dew_point_2m"]
+
+    print(f"Temperature: {temperature}{units['temperature_2m']}")
+    print(f"Wind: {wind} {units['wind_speed_10m']}")
+    print(f"Relative Humidity: {humidity}{units['relative_humidity_2m']}")
+    print(f"Dew point: {dew_point}{units['dew_point_2m']}")
+
+
+def main():
+    city = input("Enter city name: ")
+
+    city_data = get_city_coordinates(city)
+
+    if city_data is None:
+        return
+
+    display_city_info(city_data)
+
+    weather_data = get_weather(
+        city_data["latitude"],
+        city_data["longitude"]
+    )
+
+    if weather_data is None:
+        return
+
+    display_weather(weather_data)
+
+
+if __name__ == "__main__":
+    main()
